@@ -1,96 +1,87 @@
 name: build
-
-on:
+'on':
   push:
     branches:
-      - 'master'
+    - master
   schedule:
-    # everyday 11AM (UTC)
-    - cron: '* 9 * * *'
+  - cron: '* 9 * * *'
   workflow_dispatch:
     branches:
-      - 'master'
+    - master
   workflow_run:
     workflows:
-      - 'sync-upstream'
+    - sync-upstream
     branches:
-      - 'master'
+    - master
     types:
-      - completed
-
+    - completed
 jobs:
   update:
     name: Update files
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # all history (required for getting last modified time of files)
-      - name: Cache bundle directory
-        uses: actions/cache@v2
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
-      - name: Configure git
-        run: |
-          bin/configure-git
-      - name: Setup build env
-        run: |
-          bin/setup-build-env
-      - name: Update tmx
-        run: bin/update-tmx
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Cache bundle directory
+      uses: actions/cache@v2
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+    - name: Configure git
+      run: 'bin/configure-git
 
-      - name: Push changes
-        run: bin/push-changes "Update tmx"
+        '
+    - name: Setup build env
+      run: 'bin/setup-build-env
 
-      - name: Update translation stats
-        run: bin/update-translation-stats
+        '
+    - name: Update tmx
+      run: bin/update-tmx
+    - name: Push changes
+      run: bin/push-changes "Update tmx"
+    - name: Update translation stats
+      run: bin/update-translation-stats
+    - name: Push changes
+      run: bin/push-changes "Update translation stats"
+    - name: Update override stats
+      run: 'bin/update-override-stats
 
-      - name: Push changes
-        run: bin/push-changes "Update translation stats"
+        '
+    - name: Create issue if override files updated
+      run: '.github/steps/create-issue-if-override-files-updated
 
-      - name: Update override stats
-        run: |
-          bin/update-override-stats
-
-      - name: Create issue if override files updated
-        run: |
-          .github/steps/create-issue-if-override-files-updated
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push changes
-        run: bin/push-changes "Update override stats"
-
+        '
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Push changes
+      run: bin/push-changes "Update override stats"
   deploy-ja:
     name: Deploy Japanese translation to GitHub pages
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Cache bundle directory
-        uses: actions/cache@v2
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
-      - name: Setup build env
-        run: |
-          bin/setup-build-env
-      - name: Configure git
-        run: |
-          bin/configure-git
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Cache bundle directory
+      uses: actions/cache@v2
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gem-${{ hashFiles('**/Gemfile.lock') }}
+    - name: Setup build env
+      run: 'bin/setup-build-env
 
-      - name: Exec po4a-translate
-        run: bin/exec-po4a-translate
+        '
+    - name: Configure git
+      run: 'bin/configure-git
 
-#      - name: Apply override files
-#        run: bin/exec-override
+        '
+    - name: Exec po4a-translate
+      run: bin/exec-po4a-translate
+    - name: Deploy to surge.sh
+      run: 'bin/deploy
 
-
-      - name: Deploy to surge.sh
-        run: |
-          bin/deploy
-        env:
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        '
+      env:
+        SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+        SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
